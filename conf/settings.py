@@ -1,5 +1,7 @@
 from datetime import timedelta
 import os
+os.environ["PGCLIENTENCODING"] = "UTF8" 
+
 from pathlib import Path
 
 
@@ -60,9 +62,12 @@ DATABASES = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.getenv("POSTGRES_DB", "jobx"),
         "USER": os.getenv("POSTGRES_USER", "postgres"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "7799"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "1210"),
         "HOST": os.getenv("POSTGRES_HOST", "127.0.0.1"),
         "PORT": os.getenv("POSTGRES_PORT", "5432"),
+        'OPTIONS': {
+            'client_encoding': 'UTF8',
+        },
     }
 }
 
