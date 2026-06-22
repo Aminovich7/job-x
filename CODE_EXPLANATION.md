@@ -1,4 +1,4 @@
-﻿# Freelance Marketplace API - Detailed Code Explanation
+# Freelance Marketplace API - Detailed Code Explanation
 
 ## Table of Contents
 
@@ -132,6 +132,7 @@ Review: OneToOne to Contract, rating (1-5), comment, created_at.
 ### contracts/serializers.py
 
 ContractSerializer: Fully read-only.
+CreateContractSerializer: Validates project is open, has no contract, user is project owner, freelancer exists. Permission check enforced by view (IsClient).
 FinishContractSerializer: Validates contract is active. Permission check enforced by view (IsContractClient).
 ReviewSerializer: Validates contract is finished and no existing review. Permission check enforced by view (IsContractClient).
 CancelContractSerializer: Validates contract is active. Permission check enforced by view (IsContractParticipant).
@@ -139,6 +140,7 @@ CancelContractSerializer: Validates contract is active. Permission check enforce
 ### contracts/views.py
 
 contract_list_view: GET lists contracts where user is client or freelancer.
+contract_create_view: POST creates contract (client only). Validates project is open, no existing contract.
 contract_detail_view: GET returns contract (participants only).
 finish_contract_view: POST finishes contract (client only). Sets finished_at, project completed.
 cancel_contract_view: POST cancels contract (client or freelancer). Sets project cancelled.

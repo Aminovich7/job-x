@@ -309,6 +309,40 @@ item:
                 - "}"
   - name: Contracts
     item:
+      - name: Create Contract (client)
+        request:
+          method: POST
+          url:
+            raw: "{{base_url}}/api/contracts/create/"
+            host:
+              - "{{base_url}}"
+            path:
+              - api
+              - contracts
+              - create
+              - ""
+          header:
+            - key: Content-Type
+              value: application/json
+            - key: Authorization
+              value: "Bearer {{client_token}}"
+          body:
+            mode: raw
+            raw: |-
+              {
+                "project_id": "{{project_id}}",
+                "freelancer_id": 2,
+                "agreed_price": "450.00"
+              }
+        event:
+          - listen: test
+            script:
+              exec:
+                - "var res = pm.response.json();"
+                - "if (res.id) {"
+                - "    pm.collectionVariables.set('contract_id', res.id);"
+                - "    console.log('Contract created: ' + res.id);"
+                - "}"
       - name: List Contracts
         request:
           method: GET

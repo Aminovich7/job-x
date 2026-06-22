@@ -10,8 +10,8 @@ from drf_spectacular.utils import extend_schema
 
 from projects.models import Project
 from .models import Contract
-from .permissions import IsContractClient, IsContractParticipant, enforce_permission
-from .serializers import CancelContractSerializer, ContractSerializer, FinishContractSerializer, ReviewSerializer
+from .permissions import IsClient, IsContractClient, IsContractParticipant, enforce_permission
+from .serializers import CancelContractSerializer, ContractSerializer, CreateContractSerializer, FinishContractSerializer, ReviewSerializer
 
 
 @api_view(["GET"])
@@ -20,6 +20,25 @@ from .serializers import CancelContractSerializer, ContractSerializer, FinishCon
 def contract_list_view(request):
     contracts = Contract.objects.filter(Q(client=request.user) | Q(freelancer=request.user))
     return Response(ContractSerializer(contracts, many=True).data)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@extend_schema(request=CreateContractSerializer, responses=ContractSerializer)
+def contract_create_view(request):
+    enforce_permission(request, IsClient)
+    serializer = CreateContractSerializer(data=request.data, context={"request": request})
+    serializer.is_valid(raise_exception=True)
+
+    project = Project.objects.get(id=serializer.validated_data["project_id"])
+    contract = Contract.objects.create(
+        project=project,
+        client=request.user,
+        freelancer_id=serializer.validated_data["freelancer_id"],
+        agreed_price=serializer.validated_data["agreed_price"],
+    )
+
+    return Response(ContractSerializer(contract).data, status=status.HTTP_201_CREATED)
 
 
 @api_view(["GET"])

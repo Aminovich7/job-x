@@ -49,7 +49,7 @@ python manage.py runserver
 |-----|--------|---------------|
 | `users` | `User` (custom, extends `AbstractUser`) | `POST /api/auth/register/`, `POST /api/auth/login/` |
 | `projects` | `Project`, `Bid` | CRUD `/api/projects`, bids nested at `/api/projects/<id>/bids/` |
-| `contracts` | `Contract`, `Review` | `/api/contracts/`, finish, cancel, review (no create — created via bid acceptance) |
+| `contracts` | `Contract`, `Review` | `POST /api/contracts/create/`, `/api/contracts/`, finish, cancel, review |
 | `freelancers` | (read-only views on `User` and `Review`) | `GET /api/freelancers/`, reviews, skills |
 | `skills` | `Skill`, `Category` | `GET /api/skills/`, `GET /api/categories/` |
 
@@ -94,9 +94,11 @@ Permissions are enforced via a custom `enforce_permission()` helper, **duplicate
 
 ### Contract creation
 
-There is no `POST /api/contracts/` endpoint. Contracts are created **only** as a side effect of
-accepting a bid at `projects/views.py:121` (`accept_bid_view`). The `ContractSerializer` is
-fully read-only — `agreed_price` is set from the bid's price at creation time and cannot be
+Contracts can be created in two ways:
+1. **Directly** via `POST /api/contracts/create/` (client only) — accepts `project_id`, `freelancer_id`, `agreed_price`
+2. **As a side effect** of accepting a bid at `projects/views.py:121` (`accept_bid_view`)
+
+The `ContractSerializer` is fully read-only — `agreed_price` is set at creation time and cannot be
 changed afterwards.
 
 ## Cross-app dependency

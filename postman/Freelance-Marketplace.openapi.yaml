@@ -1,4 +1,4 @@
-﻿openapi: 3.0.3
+openapi: 3.0.3
 info:
   title: Freelance Marketplace API
   description: |
@@ -199,6 +199,18 @@ components:
           type: string
         contract_id:
           type: integer
+
+    CreateContractRequest:
+      type: object
+      required: [project_id, freelancer_id, agreed_price]
+      properties:
+        project_id:
+          type: integer
+        freelancer_id:
+          type: integer
+        agreed_price:
+          type: number
+          format: decimal
 
     Contract:
       type: object
@@ -818,6 +830,35 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Contract'
+
+  /api/contracts/create/:
+    post:
+      tags: [contracts]
+      summary: Create a contract directly
+      description: |
+        Only clients can create contracts. Creates a contract for an open project.
+        Validates that the project is open, has no existing contract, and the freelancer exists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateContractRequest'
+            example:
+              project_id: 1
+              freelancer_id: 2
+              agreed_price: 4500.00
+      responses:
+        '201':
+          description: Contract created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+        '400':
+          description: Validation error (project not open, contract exists, not your project, etc.)
+        '403':
+          description: Only clients can create contracts
 
   /api/contracts/{contract_id}/:
     get:
