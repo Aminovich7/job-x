@@ -1,0 +1,1067 @@
+﻿openapi: 3.0.3
+info:
+  title: Freelance Marketplace API
+  description: |
+    Mini Upwork backend API with users, projects, bids, contracts, and reviews.
+    JWT authentication required for all endpoints except register and login.
+  version: 1.0.0
+  contact:
+    name: job-x
+
+servers:
+  - url: http://127.0.0.1:8000
+    description: Local development server
+
+security:
+  - jwtAuth: []
+
+components:
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [client, freelancer]
+        bio:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      readOnly: true
+
+    RegisterRequest:
+      type: object
+      required: [username, email, password, role]
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        role:
+          type: string
+          enum: [client, freelancer]
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+
+    TokenPair:
+      type: object
+      properties:
+        refresh:
+          type: string
+        access:
+          type: string
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [client, freelancer]
+        bio:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    ProfileUpdateRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        bio:
+          type: string
+
+    ChangePasswordRequest:
+      type: object
+      required: [old_password, new_password]
+      properties:
+        old_password:
+          type: string
+          format: password
+        new_password:
+          type: string
+          format: password
+
+    Project:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        budget:
+          type: number
+          format: decimal
+        deadline:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [open, in_progress, completed, cancelled]
+        client:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    ProjectCreateRequest:
+      type: object
+      required: [title, description, budget, deadline]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        budget:
+          type: number
+          format: decimal
+        deadline:
+          type: string
+          format: date
+
+    Bid:
+      type: object
+      properties:
+        id:
+          type: integer
+        project:
+          type: integer
+        freelancer:
+          type: integer
+        price:
+          type: number
+          format: decimal
+        message:
+          type: string
+        status:
+          type: string
+          enum: [pending, accepted, rejected]
+        created_at:
+          type: string
+          format: date-time
+
+    BidCreateRequest:
+      type: object
+      required: [price, message]
+      properties:
+        price:
+          type: number
+          format: decimal
+        message:
+          type: string
+
+    AcceptBidResponse:
+      type: object
+      properties:
+        bid_id:
+          type: integer
+        status:
+          type: string
+        project_status:
+          type: string
+        contract_id:
+          type: integer
+
+    Contract:
+      type: object
+      properties:
+        id:
+          type: integer
+        project:
+          type: integer
+        client:
+          type: integer
+        freelancer:
+          type: integer
+        agreed_price:
+          type: number
+          format: decimal
+        status:
+          type: string
+          enum: [active, finished, cancelled]
+        created_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+      readOnly: true
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+        reviewer:
+          type: string
+        reviewer_id:
+          type: integer
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    ReviewCreateRequest:
+      type: object
+      required: [rating, comment]
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+
+    Freelancer:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        bio:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      readOnly: true
+
+    Skill:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+
+    SkillActionRequest:
+      type: object
+      required: [skill_id]
+      properties:
+        skill_id:
+          type: integer
+
+    PaginatedResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          nullable: true
+        previous:
+          type: string
+          nullable: true
+        results:
+          type: array
+          items: {}
+
+    ErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+
+    ValidationErrorResponse:
+      type: object
+      additionalProperties: true
+
+paths:
+  # ===== AUTH =====
+  /api/auth/register/:
+    post:
+      tags: [auth]
+      summary: Register a new user
+      description: Create a new client or freelancer account. No authentication required.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              username: john_doe
+              email: john@example.com
+              password: securepass123
+              role: client
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+
+  /api/auth/login/:
+    post:
+      tags: [auth]
+      summary: Login and get JWT tokens
+      description: Authenticate with username and password. Returns access and refresh tokens.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              username: john_doe
+              password: securepass123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '400':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/logout/:
+    post:
+      tags: [auth]
+      summary: Logout (blacklist refresh token)
+      description: Invalidate the refresh token so it can no longer be used to obtain new access tokens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh]
+              properties:
+                refresh:
+                  type: string
+            example:
+              refresh: eyJhbGciOiJIUzI1NiJ9...
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '400':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/profile/:
+    get:
+      tags: [auth]
+      summary: Get own profile
+      description: Returns the authenticated user's profile.
+      responses:
+        '200':
+          description: Profile retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+    patch:
+      tags: [auth]
+      summary: Update own profile
+      description: Partially update username, email, or bio.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdateRequest'
+            example:
+              bio: Full-stack developer with 5 years experience
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          description: Validation error
+
+  /api/auth/profile/password/:
+    put:
+      tags: [auth]
+      summary: Change password
+      description: Change the authenticated user's password. Requires current password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+            example:
+              old_password: securepass123
+              new_password: newsecurepass456
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '400':
+          description: Invalid current password or validation error
+
+  # ===== PROJECTS =====
+  /api/projects:
+    get:
+      tags: [projects]
+      summary: List open projects
+      description: |
+        Returns paginated list of open projects. Supports search and budget filtering.
+        Query parameters: search (title), min_budget, max_budget.
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search projects by title (case-insensitive)
+        - name: min_budget
+          in: query
+          schema:
+            type: number
+          description: Minimum budget filter
+        - name: max_budget
+          in: query
+          schema:
+            type: number
+          description: Maximum budget filter
+        - name: page
+          in: query
+          schema:
+            type: integer
+          description: Page number (10 items per page)
+      responses:
+        '200':
+          description: Paginated list of projects
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      results:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Project'
+    post:
+      tags: [projects]
+      summary: Create a new project
+      description: Only clients can create projects. Status defaults to "open".
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreateRequest'
+            example:
+              title: Build a mobile app
+              description: Need a React Native developer for an e-commerce app
+              budget: 5000.00
+              deadline: "2026-08-01"
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          description: Validation error
+        '403':
+          description: Only clients can create projects
+
+  /api/projects/{project_id}/:
+    get:
+      tags: [projects]
+      summary: Get project detail
+      description: Returns full details of a project. Any authenticated user can view.
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '404':
+          description: Project not found
+    patch:
+      tags: [projects]
+      summary: Update a project
+      description: Only the project owner (client) can update. Only open projects can be edited.
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreateRequest'
+      responses:
+        '200':
+          description: Project updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          description: Validation error (project not open)
+        '403':
+          description: Not the project owner
+
+  /api/projects/{project_id}/cancel/:
+    post:
+      tags: [projects]
+      summary: Cancel a project
+      description: Only the project owner can cancel. Only open projects can be cancelled.
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Project cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          description: Project is not open
+        '403':
+          description: Not the project owner
+
+  /api/projects/{project_id}/skills/:
+    get:
+      tags: [projects]
+      summary: List project skills
+      description: Returns all skills assigned to the project.
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of skills
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Skill'
+    post:
+      tags: [projects]
+      summary: Add skill to project
+      description: Only the project owner can add skills.
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SkillActionRequest'
+            example:
+              skill_id: 1
+      responses:
+        '200':
+          description: Skills updated
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Skill'
+        '400':
+          description: skill_id required
+    delete:
+      tags: [projects]
+      summary: Remove skill from project
+      description: Only the project owner can remove skills.
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SkillActionRequest'
+      responses:
+        '204':
+          description: Skill removed
+        '400':
+          description: skill_id required
+
+  /api/projects/{project_id}/bids/:
+    get:
+      tags: [bids]
+      summary: List bids on a project
+      description: Only the project owner (client) can see all bids.
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of bids
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Bid'
+        '403':
+          description: Not the project owner
+    post:
+      tags: [bids]
+      summary: Place a bid on a project
+      description: Only freelancers can place bids. One bid per freelancer per project.
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BidCreateRequest'
+            example:
+              price: 4500.00
+              message: I have 5 years of React Native experience and can deliver in 3 weeks.
+      responses:
+        '201':
+          description: Bid placed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bid'
+        '400':
+          description: Duplicate bid or validation error
+        '403':
+          description: Only freelancers can bid
+
+  /api/projects/{project_id}/bids/{bid_id}/:
+    delete:
+      tags: [bids]
+      summary: Withdraw a bid
+      description: Only the freelancer who placed the bid can withdraw it. Only pending bids can be withdrawn.
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: bid_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Bid withdrawn
+        '400':
+          description: Bid is not pending
+        '403':
+          description: Not your bid
+
+  /api/projects/{project_id}/bids/{bid_id}/accept/:
+    post:
+      tags: [bids]
+      summary: Accept a bid
+      description: |
+        Only the project owner can accept a bid. This action:
+        - Sets the accepted bid status to "accepted"
+        - Sets all other bids to "rejected"
+        - Changes project status to "in_progress"
+        - Creates a Contract automatically
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: bid_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Bid accepted, contract created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptBidResponse'
+        '400':
+          description: Project is not open
+        '403':
+          description: Not the project owner
+
+  # ===== CONTRACTS =====
+  /api/contracts:
+    get:
+      tags: [contracts]
+      summary: List user's contracts
+      description: Returns all contracts where the user is either the client or freelancer.
+      responses:
+        '200':
+          description: List of contracts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Contract'
+
+  /api/contracts/{contract_id}/:
+    get:
+      tags: [contracts]
+      summary: Get contract detail
+      description: Only the client or freelancer on the contract can view it.
+      parameters:
+        - name: contract_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Contract details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+        '403':
+          description: Not a contract participant
+        '404':
+          description: Contract not found
+
+  /api/contracts/{contract_id}/finish/:
+    post:
+      tags: [contracts]
+      summary: Finish a contract
+      description: |
+        Only the client can finish a contract. This action:
+        - Sets contract status to "finished"
+        - Sets finished_at timestamp
+        - Sets project status to "completed"
+      parameters:
+        - name: contract_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Contract finished
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+        '400':
+          description: Contract is not active
+        '403':
+          description: Only the client can finish
+
+  /api/contracts/{contract_id}/cancel/:
+    post:
+      tags: [contracts]
+      summary: Cancel a contract
+      description: |
+        Either the client or freelancer can cancel. This action:
+        - Sets contract status to "cancelled"
+        - Sets project status to "cancelled"
+      parameters:
+        - name: contract_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Contract cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+        '400':
+          description: Contract is not active
+        '403':
+          description: Not a contract participant
+
+  /api/contracts/{contract_id}/review/:
+    post:
+      tags: [contracts]
+      summary: Review a finished contract
+      description: |
+        Only the client can review. One review per contract.
+        Rating must be between 1 and 5.
+      parameters:
+        - name: contract_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreateRequest'
+            example:
+              rating: 5
+              comment: Excellent work! Delivered on time and exceeded expectations.
+      responses:
+        '201':
+          description: Review created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          description: Contract not finished, already reviewed, or validation error
+        '403':
+          description: Only the client can review
+
+  # ===== FREELANCERS =====
+  /api/freelancers/:
+    get:
+      tags: [freelancers]
+      summary: List freelancers
+      description: |
+        Returns paginated list of all freelancers. Supports search by username or bio.
+        Query parameters: search (username or bio).
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search freelancers by username or bio (case-insensitive)
+        - name: page
+          in: query
+          schema:
+            type: integer
+          description: Page number (10 items per page)
+      responses:
+        '200':
+          description: Paginated list of freelancers
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      results:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Freelancer'
+
+  /api/freelancers/{freelancer_id}/reviews/:
+    get:
+      tags: [freelancers]
+      summary: Get freelancer reviews
+      description: Returns all reviews for a specific freelancer. Paginated.
+      parameters:
+        - name: freelancer_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Paginated list of reviews
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      results:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Review'
+        '404':
+          description: Freelancer not found
+
+  /api/freelancers/{freelancer_id}/skills/:
+    get:
+      tags: [freelancers]
+      summary: Get freelancer skills
+      description: Returns all skills assigned to a freelancer.
+      parameters:
+        - name: freelancer_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of skills
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Skill'
+        '404':
+          description: Freelancer not found
+
+  # ===== SKILLS & CATEGORIES =====
+  /api/skills/:
+    get:
+      tags: [skills]
+      summary: List all skills
+      description: Returns all available skills in the system.
+      responses:
+        '200':
+          description: List of skills
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Skill'
+
+  /api/categories/:
+    get:
+      tags: [categories]
+      summary: List all categories
+      description: Returns all available project categories.
+      responses:
+        '200':
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+
+tags:
+  - name: auth
+    description: Authentication and user profile operations
+  - name: projects
+    description: Project CRUD and management
+  - name: bids
+    description: Bid management on projects
+  - name: contracts
+    description: Contract lifecycle management
+  - name: freelancers
+    description: Freelancer search and discovery
+  - name: skills
+    description: Skills catalog
+  - name: categories
+    description: Project categories catalog
+
