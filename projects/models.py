@@ -24,6 +24,14 @@ class Project(models.Model):
         related_name="projects",
         on_delete=models.CASCADE,
     )
+    skills = models.ManyToManyField("skills.Skill", blank=True, related_name="projects")
+    category = models.ForeignKey(
+        "skills.Category",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="projects",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
 

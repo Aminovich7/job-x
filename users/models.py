@@ -13,3 +13,4 @@ class User(AbstractUser):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     bio = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    skills = models.ManyToManyField("skills.Skill", blank=True, related_name="freelancers")

@@ -59,3 +59,20 @@ class ReviewSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A review already exists for this contract.")
 
         return attrs
+
+
+class CancelContractSerializer(serializers.Serializer):
+    def validate(self, attrs):
+        contract = self.context.get("contract")
+        request = self.context.get("request")
+
+        if contract is None or request is None:
+            raise serializers.ValidationError("Contract context is required.")
+
+        if contract.status != Contract.STATUS_ACTIVE:
+            raise serializers.ValidationError("Contract must be active.")
+
+        if request.user not in (contract.client, contract.freelancer):
+            raise serializers.ValidationError("Only the client or freelancer can cancel the contract.")
+
+        return attrs

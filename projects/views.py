@@ -9,6 +9,8 @@ from rest_framework.response import Response
 from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
 
 from contracts.models import Contract
+from skills.models import Skill
+from skills.serializers import SkillSerializer
 from .filters import ProjectFilter
 from .models import Bid, Project
 from .permissions import (
@@ -19,7 +21,12 @@ from .permissions import (
     IsProjectOwner,
     enforce_permission,
 )
-from .serializers import AcceptBidSerializer, BidSerializer, ProjectSerializer
+from .serializers import (
+    AcceptBidSerializer,
+    BidSerializer,
+    ProjectSerializer,
+    ProjectUpdateSerializer,
+)
 
 
 class ProjectPagination(PageNumberPagination):
@@ -125,3 +132,67 @@ def accept_bid_view(request, project_id, bid_id):
         "contract_id": contract.id,
     }
     return Response(AcceptBidSerializer(payload).data, status=status.HTTP_200_OK)
+
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+@extend_schema(request=ProjectUpdateSerializer, responses=ProjectSerializer)
+def project_update_view(request, project_id):
+    project = get_object_or_404(Project, id=project_id)
+    enforce_permission(request, IsProjectOwner, project)
+    serializer = ProjectUpdateSerializer(project, data=request.data, partial=True, context={"project": project})
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response(ProjectSerializer(project).data)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@extend_schema(responses=ProjectSerializer)
+def project_cancel_view(request, project_id):
+    project = get_object_or_404(Project, id=project_id)
+    enforce_permission(request, IsProjectOwner, project)
+    if project.status != Project.STATUS_OPEN:
+        raise ValidationError({"project": "Only open projects can be cancelled."})
+    project.status = Project.STATUS_CANCELLED
+    project.save(update_fields=["status"])
+    return Response(ProjectSerializer(project).data)
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+@extend_schema(responses=None)
+def bid_withdraw_view(request, project_id, bid_id):
+    project = get_object_or_404(Project, id=project_id)
+    bid = get_object_or_404(Bid, id=bid_id, project=project)
+    if bid.freelancer != request.user:
+        from rest_framework.exceptions import PermissionDenied
+
+        raise PermissionDenied("You can only withdraw your own bids.")
+    if bid.status != Bid.STATUS_PENDING:
+        raise ValidationError({"bid": "Only pending bids can be withdrawn."})
+    bid.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["GET", "POST", "DELETE"])
+@permission_classes([IsAuthenticated])
+@extend_schema(responses=SkillSerializer(many=True))
+def project_skills_view(request, project_id):
+    project = get_object_or_404(Project, id=project_id)
+    enforce_permission(request, IsProjectOwner, project)
+
+    if request.method == "GET":
+        return Response(SkillSerializer(project.skills.all(), many=True).data)
+
+    skill_id = request.data.get("skill_id")
+    if not skill_id:
+        return Response({"skill_id": "This field is required."}, status=status.HTTP_400_BAD_REQUEST)
+    skill = get_object_or_404(Skill, id=skill_id)
+
+    if request.method == "POST":
+        project.skills.add(skill)
+        return Response(SkillSerializer(project.skills.all(), many=True).data)
+
+    project.skills.remove(skill)
+    return Response(status=status.HTTP_204_NO_CONTENT)

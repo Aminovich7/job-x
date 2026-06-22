@@ -44,3 +44,21 @@ class AcceptBidSerializer(serializers.Serializer):
     status = serializers.CharField(read_only=True)
     project_status = serializers.CharField(read_only=True)
     contract_id = serializers.IntegerField(read_only=True)
+
+
+class ProjectUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Project
+        fields = ["id", "title", "description", "budget", "deadline", "status", "client", "created_at"]
+        read_only_fields = ["id", "status", "client", "created_at"]
+
+    def validate_deadline(self, value):
+        if value < timezone.localdate():
+            raise serializers.ValidationError("Deadline must not be in the past.")
+        return value
+
+    def validate(self, attrs):
+        project = self.context["project"]
+        if project.status != Project.STATUS_OPEN:
+            raise serializers.ValidationError("Only open projects can be edited.")
+        return attrs

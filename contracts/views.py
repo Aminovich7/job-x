@@ -10,7 +10,7 @@ from drf_spectacular.utils import extend_schema
 
 from .models import Contract
 from .permissions import IsContractClient, IsContractParticipant, enforce_permission
-from .serializers import ContractSerializer, FinishContractSerializer, ReviewSerializer
+from .serializers import CancelContractSerializer, ContractSerializer, FinishContractSerializer, ReviewSerializer
 
 
 @api_view(["GET"])
@@ -62,3 +62,21 @@ def review_contract_view(request, contract_id):
     serializer.is_valid(raise_exception=True)
     review = serializer.save(contract=contract)
     return Response(ReviewSerializer(review).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@extend_schema(request=None, responses=ContractSerializer)
+def cancel_contract_view(request, contract_id):
+    contract = get_object_or_404(Contract, id=contract_id)
+    enforce_permission(request, IsContractParticipant, contract)
+    serializer = CancelContractSerializer(data={}, context={"contract": contract, "request": request})
+    serializer.is_valid(raise_exception=True)
+
+    with transaction.atomic():
+        contract.status = Contract.STATUS_CANCELLED
+        contract.save(update_fields=["status"])
+        contract.project.status = "cancelled"
+        contract.project.save(update_fields=["status"])
+
+    return Response(ContractSerializer(contract).data, status=status.HTTP_200_OK)

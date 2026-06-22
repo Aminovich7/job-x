@@ -15,7 +15,7 @@ Requires **PostgreSQL**. Set env vars or rely on defaults in `conf/settings.py`:
 ```
 POSTGRES_DB=jobx
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
+POSTGRES_PASSWORD=7799
 POSTGRES_HOST=127.0.0.1
 POSTGRES_PORT=5432
 ```
@@ -34,13 +34,14 @@ python manage.py runserver
 | Create superuser | `python manage.py createsuperuser` |
 | OpenAPI schema | `GET /api/schema/` |
 | Swagger UI | `/api/docs/` |
-| Tests | `python manage.py test` (no tests written yet — all `tests.py` are stubs) |
+| Tests | `python manage.py test` (all `tests.py` are empty stubs) |
 
 ## Architecture
 
-- **Settings module**: `conf.settings` (set via `DJANGO_SETTINGS_MODULE` in `manage.py`)
+- **Settings module**: `conf/settings` (set via `DJANGO_SETTINGS_MODULE` in `manage.py`)
 - **URL root**: `conf/urls.py` — mounts all app routers
 - **3 apps**: `users`, `projects`, `contracts`
+- **Django 6.x**, **DRF 3.16+**, **Python 3.14** (check `.pyc` headers if unsure)
 
 ### Apps & responsibilities
 
@@ -50,41 +51,60 @@ python manage.py runserver
 | `projects` | `Project`, `Bid` | CRUD `/api/projects`, bids nested at `/api/projects/<id>/bids/` |
 | `contracts` | `Contract`, `Review` | `/api/contracts/`, finish, review |
 
+### `core/` directory — dead code
+
+`core/` contains only a stale `__pycache__/permissions.cpython-314.pyc`. The source file was deleted; the `.pyc` is unreferenced. Do not import from `core` — it has no `__init__.py` and is not in `INSTALLED_APPS`.
+
 ### URL trailing-slash quirk
 
 Auth endpoints use **trailing slash** (`/api/auth/register/`).
 Project and contract routes do **NOT** use trailing slash (`/api/projects`, `/api/contracts`).
 Mismatched slashes return 404 — this is a common source of test failures.
 
+**Note:** `README.md` incorrectly shows trailing slashes on project/contract endpoints. The actual URL patterns in `conf/urls.py` omit them. Trust the code, not the README.
+
 ## Auth
 
 - JWT via `djangorestframework-simplejwt`
 - All endpoints require `Authorization: Bearer <access_token>` except `/api/auth/register/` and `/api/auth/login/`
+- Access token lifetime: **1 day** (set in `conf/settings.py` `SIMPLE_JWT`)
 - Custom `User` model with `role` field: `"client"` or `"freelancer"` — role determines which write operations are allowed
 
 ## Permissions pattern
 
-Permissions are enforced via a custom `enforce_permission()` helper (duplicated in `projects/permissions.py` and `contracts/permissions.py`). Not all views use DRF's `permission_classes` consistently — some apply permissions manually inside the view. Read `projects/permissions.py` and `contracts/permissions.py` before modifying access logic.
+Permissions are enforced via a custom `enforce_permission()` helper, **duplicated identically** in `projects/permissions.py` and `contracts/permissions.py`. Not all views use DRF's `permission_classes` consistently — some apply permissions manually inside the view via `enforce_permission()`. Read both files before modifying access logic.
 
+- **`IsClient`**: role must be `"client"`
+- **`IsFreelancer`**: role must be `"freelancer"`
 - **`IsAuthenticatedClientWrite`**: GET allowed for any auth user; POST restricted to `client` role
 - **`IsAuthenticatedFreelancerBidWrite`**: GET allowed for any auth user; POST restricted to `freelancer` role
-- **`IsProjectOwner`**: only the user whose `client` FK matches the project
-- **`IsContractParticipant`**: client or freelancer on the contract
-- **`IsContractClient`**: only the client on the contract
+- **`IsProjectOwner`**: only the user whose `client` FK matches the project (object-level)
+- **`IsContractParticipant`**: client or freelancer on the contract (object-level)
+- **`IsContractClient`**: only the client on the contract (object-level)
 
 ## Business flow
 
 1. Client registers → creates project
 2. Freelancer registers → places bid on project
-3. Client accepts bid → `Contract` created automatically (transactional)
+3. Client accepts bid → `Contract` created automatically (transactional, rejects other bids)
 4. Client finishes contract → status becomes `finished`, project becomes `completed`
 5. Client reviews contract → one review per contract, rating 1–5
+
+## Cross-app dependency
+
+`projects/views.py:accept_bid_view` imports `Contract` from `contracts.models` to create a contract when a bid is accepted. This couples the `projects` app to the `contracts` app.
 
 ## Database
 
 - PostgreSQL only — no SQLite fallback configured
 - `AUTH_USER_MODEL = "users.User"` — any model changes require a migration
 - `DEFAULT_AUTO_FIELD = "django.db.models.AutoField"` (not BigAutoField)
+- Bid uniqueness enforced at **two levels**: `BidSerializer.validate()` check + `UniqueConstraint` on `(project, freelancer)` in `Bid.Meta`
+
+## Pagination
+
+- Only **projects** are paginated: `ProjectPagination` with `page_size=10`
+- Contracts and users have **no pagination**
 
 ## Notes
 
@@ -92,3 +112,4 @@ Permissions are enforced via a custom `enforce_permission()` helper (duplicated 
 - `postman/` directory referenced in README — Postman collection and OpenAPI YAML live there
 - Tests are empty stubs — no test fixtures or factories exist
 - Swagger/Schema generated by `drf-spectacular` at `/api/schema/` and `/api/docs/`
+- `TokenPairSerializer` in `users/serializers.py` is declared but unused — login view builds token response manually

@@ -1,11 +1,18 @@
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from drf_spectacular.utils import extend_schema
 
-from .serializers import LoginSerializer, RegisterSerializer, TokenPairSerializer, UserSerializer
+from .serializers import (
+    ChangePasswordSerializer,
+    LoginSerializer,
+    RegisterSerializer,
+    TokenPairSerializer,
+    UserSerializer,
+    UserProfileSerializer,
+)
 
 
 @api_view(["POST"])
@@ -33,3 +40,38 @@ def login_view(request):
         },
         status=status.HTTP_200_OK,
     )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def logout_view(request):
+    refresh_token = request.data.get("refresh")
+    if not refresh_token:
+        return Response({"refresh": "This field is required."}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        token = RefreshToken(refresh_token)
+        token.blacklist()
+    except Exception:
+        return Response({"detail": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({"detail": "Logged out successfully."}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET", "PATCH"])
+@permission_classes([IsAuthenticated])
+def profile_view(request):
+    if request.method == "GET":
+        return Response(UserProfileSerializer(request.user).data)
+
+    serializer = UserProfileSerializer(request.user, data=request.data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response(serializer.data)
+
+
+@api_view(["PUT"])
+@permission_classes([IsAuthenticated])
+def change_password_view(request):
+    serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response({"detail": "Password changed successfully."}, status=status.HTTP_200_OK)
