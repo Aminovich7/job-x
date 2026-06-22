@@ -2,7 +2,7 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -167,8 +167,6 @@ def bid_withdraw_view(request, project_id, bid_id):
     project = get_object_or_404(Project, id=project_id)
     bid = get_object_or_404(Bid, id=bid_id, project=project)
     if bid.freelancer != request.user:
-        from rest_framework.exceptions import PermissionDenied
-
         raise PermissionDenied("You can only withdraw your own bids.")
     if bid.status != Bid.STATUS_PENDING:
         raise ValidationError({"bid": "Only pending bids can be withdrawn."})

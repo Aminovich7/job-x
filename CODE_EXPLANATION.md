@@ -113,7 +113,7 @@ project_bids_view: GET lists bids (project owner only). POST creates bid (freela
 accept_bid_view: POST accepts bid transactionally. Creates contract, rejects other bids, updates project status.
 project_update_view: PATCH updates project (owner only, open only).
 project_cancel_view: POST cancels project (owner only, open only).
-bid_withdraw_view: DELETE withdraws bid (freelancer only, pending only).
+bid_withdraw_view: DELETE withdraws bid (freelancer only, pending only). Uses PermissionDenied from top-level imports.
 project_skills_view: GET/POST/DELETE manage project skills (owner only).
 
 ### projects/filters.py
@@ -159,7 +159,7 @@ FreelancerReviewSerializer: Read-only with reviewer info (source traversal).
 
 ### freelancers/views.py
 
-freelancer_list_view: GET lists freelancers (paginated 10/page, searchable).
+freelancer_list_view: GET lists freelancers (paginated 10/page, searchable). Uses ValidationError from top-level imports.
 freelancer_reviews_view: GET lists freelancer reviews (paginated, select_related for N+1).
 freelancer_skills_view: GET lists freelancer skills.
 

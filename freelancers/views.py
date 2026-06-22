@@ -2,6 +2,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
 
@@ -25,8 +26,7 @@ def freelancer_list_view(request):
     filterset = FreelancerFilter(request.query_params, queryset=freelancers)
     filterset.is_valid()
     if filterset.errors:
-        from rest_framework.exceptions import ValidationError as DRFValidationError
-        raise DRFValidationError(filterset.errors)
+        raise ValidationError(filterset.errors)
     paginator = FreelancerPagination()
     page = paginator.paginate_queryset(filterset.qs, request)
     serializer = FreelancerSerializer(page, many=True)
