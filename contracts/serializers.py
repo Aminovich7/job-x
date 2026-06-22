@@ -22,16 +22,12 @@ class ContractSerializer(serializers.ModelSerializer):
 class FinishContractSerializer(serializers.Serializer):
     def validate(self, attrs):
         contract = self.context.get("contract")
-        request = self.context.get("request")
 
-        if contract is None or request is None:
+        if contract is None:
             raise serializers.ValidationError("Contract context is required.")
 
         if contract.status != Contract.STATUS_ACTIVE:
             raise serializers.ValidationError("Contract must be active.")
-
-        if request.user != contract.client:
-            raise serializers.ValidationError("Only the client can finish the contract.")
 
         return attrs
 
@@ -44,16 +40,12 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         contract = self.context.get("contract")
-        request = self.context.get("request")
 
-        if contract is None or request is None:
+        if contract is None:
             raise serializers.ValidationError("Contract context is required.")
 
         if contract.status != Contract.STATUS_FINISHED:
             raise serializers.ValidationError("Contract must be finished.")
-
-        if request.user != contract.client:
-            raise serializers.ValidationError("Only the client can review the contract.")
 
         if Review.objects.filter(contract=contract).exists():
             raise serializers.ValidationError("A review already exists for this contract.")
@@ -64,15 +56,11 @@ class ReviewSerializer(serializers.ModelSerializer):
 class CancelContractSerializer(serializers.Serializer):
     def validate(self, attrs):
         contract = self.context.get("contract")
-        request = self.context.get("request")
 
-        if contract is None or request is None:
+        if contract is None:
             raise serializers.ValidationError("Contract context is required.")
 
         if contract.status != Contract.STATUS_ACTIVE:
             raise serializers.ValidationError("Contract must be active.")
-
-        if request.user not in (contract.client, contract.freelancer):
-            raise serializers.ValidationError("Only the client or freelancer can cancel the contract.")
 
         return attrs

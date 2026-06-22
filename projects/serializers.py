@@ -1,19 +1,24 @@
 from django.utils import timezone
 from rest_framework import serializers
 
+from django.utils import timezone
+from rest_framework import serializers
+
 from .models import Bid, Project
 
 
-class ProjectSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Project
-        fields = ["id", "title", "description", "budget", "deadline", "status", "client", "created_at"]
-        read_only_fields = ["id", "status", "client", "created_at"]
-
+class DeadlineValidationMixin:
     def validate_deadline(self, value):
         if value < timezone.localdate():
             raise serializers.ValidationError("Deadline must not be in the past.")
         return value
+
+
+class ProjectSerializer(DeadlineValidationMixin, serializers.ModelSerializer):
+    class Meta:
+        model = Project
+        fields = ["id", "title", "description", "budget", "deadline", "status", "client", "created_at"]
+        read_only_fields = ["id", "status", "client", "created_at"]
 
 
 class BidSerializer(serializers.ModelSerializer):
@@ -30,9 +35,6 @@ class BidSerializer(serializers.ModelSerializer):
         if request is None or project is None or freelancer is None:
             raise serializers.ValidationError("Project and freelancer context are required.")
 
-        if request.user.role != "freelancer":
-            raise serializers.ValidationError("Only freelancers can place bids.")
-
         if Bid.objects.filter(project=project, freelancer=freelancer).exists():
             raise serializers.ValidationError("You have already placed a bid on this project.")
 
@@ -46,16 +48,11 @@ class AcceptBidSerializer(serializers.Serializer):
     contract_id = serializers.IntegerField(read_only=True)
 
 
-class ProjectUpdateSerializer(serializers.ModelSerializer):
+class ProjectUpdateSerializer(DeadlineValidationMixin, serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = ["id", "title", "description", "budget", "deadline", "status", "client", "created_at"]
         read_only_fields = ["id", "status", "client", "created_at"]
-
-    def validate_deadline(self, value):
-        if value < timezone.localdate():
-            raise serializers.ValidationError("Deadline must not be in the past.")
-        return value
 
     def validate(self, attrs):
         project = self.context["project"]

@@ -76,9 +76,9 @@ Custom User model extending AbstractUser with:
 
 ### users/serializers.py
 
-RegisterSerializer: Accepts username, email, password (write-only), role. Hashes password in create().
+RegisterSerializer: Accepts username, email, password (write-only), role. Validates email uniqueness. Hashes password in create().
 LoginSerializer: Uses authenticate() to verify credentials. Returns user in attrs.
-UserProfileSerializer: Allows updating username, email, bio. Role/read-only fields protected.
+UserProfileSerializer: Allows updating username, email, bio. Validates username and email uniqueness. Role/read-only fields protected.
 ChangePasswordSerializer: Validates old password, runs Django validators on new password.
 
 ### users/views.py
@@ -101,9 +101,9 @@ Bid: project FK, freelancer FK, price (decimal), message, status (pending/accept
 
 ### projects/serializers.py
 
-ProjectSerializer: Writable: title, description, budget, deadline. Read-only: id, status, client, created_at. Validates deadline not in past.
-BidSerializer: Writable: price, message. Requires request/project/freelancer in context. Validates role is freelancer and no duplicate bids.
-ProjectUpdateSerializer: Same as ProjectSerializer but validates project is open.
+ProjectSerializer(DeadlineValidationMixin): Writable: title, description, budget, deadline. Read-only: id, status, client, created_at. Deadline validation via mixin.
+BidSerializer: Writable: price, message. Requires request/project/freelancer in context. Validates no duplicate bids. Role check enforced by view (IsFreelancer).
+ProjectUpdateSerializer(DeadlineValidationMixin): Same fields. Validates project is open before allowing edits.
 
 ### projects/views.py
 
@@ -132,9 +132,9 @@ Review: OneToOne to Contract, rating (1-5), comment, created_at.
 ### contracts/serializers.py
 
 ContractSerializer: Fully read-only.
-FinishContractSerializer: Validates contract active and requester is client.
-ReviewSerializer: Validates contract finished, requester is client, no existing review.
-CancelContractSerializer: Validates contract active and requester is client or freelancer.
+FinishContractSerializer: Validates contract is active. Permission check enforced by view (IsContractClient).
+ReviewSerializer: Validates contract is finished and no existing review. Permission check enforced by view (IsContractClient).
+CancelContractSerializer: Validates contract is active. Permission check enforced by view (IsContractParticipant).
 
 ### contracts/views.py
 
@@ -207,13 +207,13 @@ Provides defense-in-depth security.
 
 ### Context Passing Pattern
 
-Serializers receive context from views: request, project, freelancer, contract. Allows access to request user and related objects.
+Serializers receive context from views (project, freelancer, contract). Views handle permission checks; serializers use context for data validation only.
 
 ### Validation Layers
 
-1. Serializer validation (business rules in validate())
-2. Permission checks (access control in permission classes)
-Example: Bid creation uses IsAuthenticatedFreelancerBidWrite + enforce_permission(IsFreelancer) + BidSerializer.validate() + UniqueConstraint.
+1. Serializer validation (data format, uniqueness, business rules)
+2. Permission checks (view-level via enforce_permission())
+Serializers handle data validation only. Permission/role checks are enforced in views. Example: Bid creation uses enforce_permission(IsFreelancer) in view + BidSerializer validates no duplicate bids + UniqueConstraint.
 
 ### Transaction Pattern
 

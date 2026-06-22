@@ -13,6 +13,11 @@ class RegisterSerializer(serializers.ModelSerializer):
         model = User
         fields = ["username", "email", "password", "role"]
 
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("This email is already registered.")
+        return value
+
     def create(self, validated_data):
         password = validated_data.pop("password")
         user = User(**validated_data)
@@ -40,7 +45,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "username", "email", "role", "bio", "created_at"]
-        read_only_fields = fields
+        read_only_fields = ["id", "username", "email", "role", "bio", "created_at"]
 
 
 class TokenPairSerializer(serializers.Serializer):
