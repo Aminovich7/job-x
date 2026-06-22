@@ -163,6 +163,7 @@ def project_cancel_view(request, project_id):
 @permission_classes([IsAuthenticated])
 @extend_schema(responses=None)
 def bid_withdraw_view(request, project_id, bid_id):
+    enforce_permission(request, IsFreelancer)
     project = get_object_or_404(Project, id=project_id)
     bid = get_object_or_404(Bid, id=bid_id, project=project)
     if bid.freelancer != request.user:

@@ -54,6 +54,16 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = ["id", "username", "email", "role", "bio", "created_at"]
         read_only_fields = ["id", "role", "created_at"]
 
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exclude(pk=self.instance.pk).exists():
+            raise serializers.ValidationError("This username is already taken.")
+        return value
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exclude(pk=self.instance.pk).exists():
+            raise serializers.ValidationError("This email is already in use.")
+        return value
+
 
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(write_only=True)

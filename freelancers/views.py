@@ -24,6 +24,9 @@ def freelancer_list_view(request):
     freelancers = User.objects.filter(role=User.ROLE_FREELANCER)
     filterset = FreelancerFilter(request.query_params, queryset=freelancers)
     filterset.is_valid()
+    if filterset.errors:
+        from rest_framework.exceptions import ValidationError as DRFValidationError
+        raise DRFValidationError(filterset.errors)
     paginator = FreelancerPagination()
     page = paginator.paginate_queryset(filterset.qs, request)
     serializer = FreelancerSerializer(page, many=True)

@@ -8,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
 
+from projects.models import Project
 from .models import Contract
 from .permissions import IsContractClient, IsContractParticipant, enforce_permission
 from .serializers import CancelContractSerializer, ContractSerializer, FinishContractSerializer, ReviewSerializer
@@ -42,7 +43,7 @@ def finish_contract_view(request, contract_id):
     with transaction.atomic():
         contract.status = Contract.STATUS_FINISHED
         contract.finished_at = timezone.now()
-        contract.project.status = "completed"
+        contract.project.status = Project.STATUS_COMPLETED
         contract.project.save(update_fields=["status"])
         contract.save(update_fields=["status", "finished_at"])
 
@@ -76,7 +77,7 @@ def cancel_contract_view(request, contract_id):
     with transaction.atomic():
         contract.status = Contract.STATUS_CANCELLED
         contract.save(update_fields=["status"])
-        contract.project.status = "cancelled"
+        contract.project.status = Project.STATUS_CANCELLED
         contract.project.save(update_fields=["status"])
 
     return Response(ContractSerializer(contract).data, status=status.HTTP_200_OK)
