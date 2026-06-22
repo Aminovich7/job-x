@@ -353,6 +353,22 @@ item:
           header:
             - key: Authorization
               value: "Bearer {{client_token}}"
+      - name: Cancel Contract (client or freelancer)
+        request:
+          method: POST
+          url:
+            raw: "{{base_url}}/api/contracts/{{contract_id}}/cancel/"
+            host:
+              - "{{base_url}}"
+            path:
+              - api
+              - contracts
+              - "{{contract_id}}"
+              - cancel
+              - ""
+          header:
+            - key: Authorization
+              value: "Bearer {{client_token}}"
       - name: Review Contract (client)
         request:
           method: POST

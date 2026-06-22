@@ -40,7 +40,7 @@ python manage.py runserver
 
 - **Settings module**: `conf/settings` (set via `DJANGO_SETTINGS_MODULE` in `manage.py`)
 - **URL root**: `conf/urls.py` — mounts all app routers
-- **3 apps**: `users`, `projects`, `contracts`
+- **5 apps**: `users`, `projects`, `contracts`, `freelancers`, `skills`
 - **Django 6.x**, **DRF 3.16+**, **Python 3.14** (check `.pyc` headers if unsure)
 
 ### Apps & responsibilities
@@ -49,7 +49,9 @@ python manage.py runserver
 |-----|--------|---------------|
 | `users` | `User` (custom, extends `AbstractUser`) | `POST /api/auth/register/`, `POST /api/auth/login/` |
 | `projects` | `Project`, `Bid` | CRUD `/api/projects`, bids nested at `/api/projects/<id>/bids/` |
-| `contracts` | `Contract`, `Review` | `/api/contracts/`, finish, review |
+| `contracts` | `Contract`, `Review` | `/api/contracts/`, finish, cancel, review (no create — created via bid acceptance) |
+| `freelancers` | (read-only views on `User` and `Review`) | `GET /api/freelancers/`, reviews, skills |
+| `skills` | `Skill`, `Category` | `GET /api/skills/`, `GET /api/categories/` |
 
 ### `core/` directory — dead code
 
@@ -90,6 +92,13 @@ Permissions are enforced via a custom `enforce_permission()` helper, **duplicate
 4. Client finishes contract → status becomes `finished`, project becomes `completed`
 5. Client reviews contract → one review per contract, rating 1–5
 
+### Contract creation
+
+There is no `POST /api/contracts/` endpoint. Contracts are created **only** as a side effect of
+accepting a bid at `projects/views.py:121` (`accept_bid_view`). The `ContractSerializer` is
+fully read-only — `agreed_price` is set from the bid's price at creation time and cannot be
+changed afterwards.
+
 ## Cross-app dependency
 
 `projects/views.py:accept_bid_view` imports `Contract` from `contracts.models` to create a contract when a bid is accepted. This couples the `projects` app to the `contracts` app.
@@ -103,7 +112,7 @@ Permissions are enforced via a custom `enforce_permission()` helper, **duplicate
 
 ## Pagination
 
-- Only **projects** are paginated: `ProjectPagination` with `page_size=10`
+- **Projects** and **freelancers** are paginated: `page_size=10`
 - Contracts and users have **no pagination**
 
 ## Notes
