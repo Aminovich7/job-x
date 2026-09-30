@@ -15,7 +15,7 @@ Requires **PostgreSQL**. Set env vars or rely on defaults in `conf/settings.py`:
 ```
 POSTGRES_DB=jobx
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=7799
+POSTGRES_PASSWORD=your_password
 POSTGRES_HOST=127.0.0.1
 POSTGRES_PORT=5432
 ```

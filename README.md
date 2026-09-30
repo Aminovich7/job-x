@@ -29,7 +29,7 @@ Set environment variables or use defaults from conf/settings.py:
 `ash
 export POSTGRES_DB=jobx
 export POSTGRES_USER=postgres
-export POSTGRES_PASSWORD=7799
+export POSTGRES_PASSWORD=your_password
 export POSTGRES_HOST=127.0.0.1
 export POSTGRES_PORT=5432
 `

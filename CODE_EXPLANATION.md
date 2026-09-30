@@ -46,7 +46,7 @@ REST_FRAMEWORK: JWTAuthentication, IsAuthenticated, DjangoFilterBackend, drf_spe
 
 SIMPLE_JWT: ACCESS_TOKEN_LIFETIME = timedelta(days=1)
 
-DATABASES: PostgreSQL (jobx / postgres / 7799 / 127.0.0.1 / 5432)
+DATABASES: PostgreSQL (jobx / postgres / (password from POSTGRES_PASSWORD) / 127.0.0.1 / 5432)
 
 ---
 
